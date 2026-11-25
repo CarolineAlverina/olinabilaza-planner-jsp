@@ -1,0 +1,13 @@
+<%--
+  auth.jspf  -  di-include oleh halaman yang WAJIB login.
+  Kalau session belum punya "userId", user dilempar ke halaman login.
+  
+--%><%
+    if (session.getAttribute("userId") == null) {
+        session.setAttribute("error", "Please log in first.");
+        response.sendRedirect("login.jsp");
+        return;
+    }
+    int userId = (Integer) session.getAttribute("userId");
+    String userName = (String) session.getAttribute("userName");
+%>

@@ -1,0 +1,166 @@
+<%--init.jspf  -  di-include di baris paling atas SETIAP halaman.--%>
+<%@ page contentType="text/html; charset=UTF-8" %><%@ page import="java.sql.*, java.util.*, java.security.MessageDigest, java.text.SimpleDateFormat, java.time.LocalDate, java.time.ZoneId" %><%!
+    
+    static String env(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return (value == null || value.isEmpty()) ? defaultValue : value;
+    }
+
+    static final String DB_URL  = env("DB_URL", "jdbc:mysql://localhost:3306/olinabilaza_planner?createDatabaseIfNotExist=true");
+    static final String DB_USER = env("DB_USER", "root");
+    static final String DB_PASS = env("DB_PASS", "");
+
+    Connection getConnection() throws Exception {
+        Class.forName("com.mysql.cj.jdbc.Driver");          // memuat driver MySQL (file .jar di folder lib Tomcat)
+        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
+    }
+
+    static final String[] DAYS = {"", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
+    String h(Object value) {
+        if (value == null) return "";
+        return value.toString().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    String hash(String text) throws Exception {
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] bytes = md.digest(text.getBytes("UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+
+    boolean isEmpty(String s) { return s == null || s.trim().isEmpty(); }
+
+    String clean(String s) { return s == null ? "" : s.trim(); }
+
+    int toInt(String s) {
+        try { return Integer.parseInt(s.trim()); } catch (Exception e) { return 0; }
+    }
+
+    String dayName(int day) { return (day >= 1 && day <= 7) ? DAYS[day] : "-"; }
+
+    String shortTime(String time) { return time == null ? "" : time.substring(0, 5).replace(":", "."); }
+
+    String formatDate(java.util.Date date) { return new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH).format(date); }
+
+    java.sql.Date today() { return java.sql.Date.valueOf(LocalDate.now(ZoneId.of("Asia/Jakarta"))); }
+
+    java.sql.Date daysFromToday(int n) { return java.sql.Date.valueOf(LocalDate.now(ZoneId.of("Asia/Jakarta")).plusDays(n)); }
+
+    String priorityLabel(String p) {
+        if ("high".equals(p)) return "High";
+        if ("low".equals(p)) return "Low";
+        return "Medium";
+    }
+
+    void setupDatabase(Connection conn) throws Exception {
+        Statement st = conn.createStatement();
+        st.executeUpdate("CREATE TABLE IF NOT EXISTS users ("
+            + " id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+            + " name VARCHAR(100) NOT NULL,"
+            + " email VARCHAR(150) NOT NULL UNIQUE,"
+            + " password CHAR(64) NOT NULL,"
+            + " created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            + " updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
+        st.executeUpdate("CREATE TABLE IF NOT EXISTS courses ("
+            + " id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+            + " user_id BIGINT UNSIGNED NOT NULL,"
+            + " code VARCHAR(20) NOT NULL,"
+            + " name VARCHAR(120) NOT NULL,"
+            + " lecturer VARCHAR(120) NULL,"
+            + " credits TINYINT UNSIGNED NOT NULL DEFAULT 3,"
+            + " day TINYINT UNSIGNED NOT NULL,"
+            + " start_time TIME NOT NULL,"
+            + " end_time TIME NOT NULL,"
+            + " created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            + " updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + " FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)");
+        st.executeUpdate("CREATE TABLE IF NOT EXISTS tasks ("
+            + " id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+            + " user_id BIGINT UNSIGNED NOT NULL,"
+            + " course_id BIGINT UNSIGNED NOT NULL,"
+            + " title VARCHAR(150) NOT NULL,"
+            + " description TEXT NULL,"
+            + " deadline DATE NOT NULL,"
+            + " priority ENUM('low','medium','high') NOT NULL DEFAULT 'medium',"
+            + " is_done TINYINT(1) NOT NULL DEFAULT 0,"
+            + " created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            + " updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + " FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
+            + " FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE)");
+        st.executeUpdate("CREATE TABLE IF NOT EXISTS notes ("
+            + " id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+            + " user_id BIGINT UNSIGNED NOT NULL,"
+            + " course_id BIGINT UNSIGNED NULL,"
+            + " title VARCHAR(150) NOT NULL,"
+            + " content TEXT NOT NULL,"
+            + " created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            + " updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            + " FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,"
+            + " FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL)");
+
+        // Akun demo hanya dibuat kalau belum ada: guest@gmail.com / pass12345
+        ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM users WHERE email = 'guest@gmail.com'");
+        rs.next();
+        if (rs.getInt(1) == 0) {
+            PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, "Guest");
+            ps.setString(2, "guest@gmail.com");
+            ps.setString(3, hash("pass12345"));
+            ps.executeUpdate();
+            ResultSet key = ps.getGeneratedKeys();
+            key.next();
+            int guestId = key.getInt(1);
+
+            // day: 1 = Monday, 2 = Tuesday, ...
+            int matdis = seedCourse(conn, guestId, "EF234305", "Discrete Mathematics", "Pak Ilham", 1, "07:00", "09:30");
+            int pweb   = seedCourse(conn, guestId, "EF234301", "Web Programming", "Pak Irfan", 2, "09:40", "12:10");
+            int jarkom = seedCourse(conn, guestId, "EF234303", "Computer Networks", "Pak Bagus", 2, "12:30", "15:00");
+
+            seedTask(conn, guestId, pweb, "Work on the Web Programming Quiz 2 (JSP)", "At least 8 CRUD features, deployed to free hosting.", 3, "high");
+            seedTask(conn, guestId, matdis, "Do the practice problems in the book", null, 5, "medium");
+            seedTask(conn, guestId, jarkom, "Do the hands-on lab", null, 7, "medium");
+        }
+    }
+
+    int seedCourse(Connection conn, int userId, String code, String name, String lecturer, int day, String start, String end) throws Exception {
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO courses (user_id, code, name, lecturer, credits, day, start_time, end_time) VALUES (?, ?, ?, ?, 3, ?, ?, ?)",
+            Statement.RETURN_GENERATED_KEYS);
+        ps.setInt(1, userId);
+        ps.setString(2, code);
+        ps.setString(3, name);
+        ps.setString(4, lecturer);
+        ps.setInt(5, day);
+        ps.setString(6, start);
+        ps.setString(7, end);
+        ps.executeUpdate();
+        ResultSet key = ps.getGeneratedKeys();
+        key.next();
+        return key.getInt(1);
+    }
+
+    void seedTask(Connection conn, int userId, int courseId, String title, String description, int daysLeft, String priority) throws Exception {
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO tasks (user_id, course_id, title, description, deadline, priority) VALUES (?, ?, ?, ?, ?, ?)");
+        ps.setInt(1, userId);
+        ps.setInt(2, courseId);
+        ps.setString(3, title);
+        ps.setString(4, description);
+        ps.setDate(5, daysFromToday(daysLeft));
+        ps.setString(6, priority);
+        ps.executeUpdate();
+    }
+%><%
+    request.setCharacterEncoding("UTF-8");
+
+    if (application.getAttribute("dbReady") == null) {
+        Connection setupConn = getConnection();
+        setupDatabase(setupConn);
+        setupConn.close();
+        application.setAttribute("dbReady", "yes");
+    }
+%>

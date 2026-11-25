@@ -1,0 +1,14 @@
+# File hasil kompilasi / library lokal (driver MySQL di-download saat build Docker)
+*.class
+*.jar
+*.war
+target/
+
+# Pengaturan editor & sistem
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Jangan pernah upload password database
+.env

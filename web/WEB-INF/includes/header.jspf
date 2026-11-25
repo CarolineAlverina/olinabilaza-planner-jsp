@@ -1,0 +1,72 @@
+<%--header.jspf  -  bagian atas halaman (head, navbar, pesan sukses/error).--%>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= h(pageTitle) %> · OliNabilAza Planner</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="<%= bodyClass %>">
+<div class="page">
+
+    <header class="nav">
+        <a class="logo" href="dashboard.jsp">OliNabilAza Planner</a>
+
+        <% if (session.getAttribute("userId") != null) { %>
+            <nav class="nav-links">
+                <a href="dashboard.jsp" class="<%= activeMenu.equals("dashboard") ? "active" : "" %>">Dashboard</a>
+                <a href="courses.jsp" class="<%= activeMenu.equals("courses") ? "active" : "" %>">Courses</a>
+                <a href="schedule.jsp" class="<%= activeMenu.equals("schedule") ? "active" : "" %>">Schedule</a>
+                <a href="tasks.jsp" class="<%= activeMenu.equals("tasks") ? "active" : "" %>">Tasks</a>
+                <a href="notes.jsp" class="<%= activeMenu.equals("notes") ? "active" : "" %>">Notes</a>
+                <a href="profile.jsp" class="<%= activeMenu.equals("profile") ? "active" : "" %>">Profile</a>
+                <form class="logout-form" method="POST" action="logout.jsp">
+                    <button class="logout-btn" type="submit" title="Log out" aria-label="Log out">
+                        <svg viewBox="0 0 30 26" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path d="M19 3.4H14.5a9.6 9.6 0 0 0 0 19.2H19" stroke-width="4.6"/>
+                            <path d="M11 13H27M21.5 7L27.5 13L21.5 19" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </form>
+            </nav>
+        <% } else { %>
+            <nav class="nav-links guest">
+                <a href="login.jsp" class="<%= activeMenu.equals("login") ? "active" : "" %>">Login</a>
+                <a href="register.jsp" class="<%= activeMenu.equals("register") ? "active" : "" %>">Register</a>
+            </nav>
+        <% } %>
+    </header>
+
+    <%
+        // Pesan sukses / error yang dikirim dari halaman sebelumnya (disimpan di session, tampil sekali lalu dihapus)
+        String flashSuccess = (String) session.getAttribute("success");
+        String flashError = (String) session.getAttribute("error");
+        session.removeAttribute("success");
+        session.removeAttribute("error");
+
+        // Daftar error validasi form di halaman ini (disimpan di request)
+        List<String> formErrors = (List<String>) request.getAttribute("errors");
+    %>
+    <% if (flashSuccess != null) { %>
+        <div class="alert alert-ok"><%= h(flashSuccess) %></div>
+    <% } %>
+    <% if (flashError != null) { %>
+        <div class="alert alert-err"><%= h(flashError) %></div>
+    <% } %>
+    <% if (formErrors != null && !formErrors.isEmpty()) { %>
+        <div class="alert alert-err">
+            <ul>
+                <% for (String err : formErrors) { %>
+                    <li><%= h(err) %></li>
+                <% } %>
+            </ul>
+        </div>
+    <% } %>
+
+    <main>
