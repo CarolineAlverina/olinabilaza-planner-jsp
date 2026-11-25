@@ -2,7 +2,7 @@
 
 A student planner for managing **courses (with weekly schedule), tasks, and lecture notes**, rebuilt from our Laravel midterm project using **JSP (Jakarta Server Pages) + JDBC + MySQL**.
 
-- **Live website:** https://olinabilaza-planner.onrender.com  *(change this to your Render URL)*
+- **Live website:**
 - **Demo account:** `guest@gmail.com` / `pass12345`
 - **Members:** Nabila Zalfaa Putri Hamid (5025251089), Mumtaz Hanumi Fayazida (5025251091), Caroline Alverina (5025251097)
 
@@ -38,7 +38,7 @@ olinabilaza-planner-jsp/
    ```xml
    <Context docBase="C:/path/to/olinabilaza-planner-jsp/web" reloadable="true" />
    ```
-5. Run `bin/startup.bat` (Windows) or `bin/startup.sh`, then open http://localhost:8080/planner/
+5. Run `bin/startup.bat` (Windows) or `bin/startup.sh`, then open http://localhost:8080/olinabilaza/
    Tables and the demo account are created automatically on the first visit.
 
 ## Environment variables (hosting)
