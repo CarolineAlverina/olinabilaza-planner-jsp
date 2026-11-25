@@ -40,13 +40,3 @@ olinabilaza-planner-jsp/
    ```
 5. Run `bin/startup.bat` (Windows) or `bin/startup.sh`, then open http://localhost:8080/olinabilaza/
    Tables and the demo account are created automatically on the first visit.
-
-## Environment variables (hosting)
-| Name | Example |
-|------|---------|
-| `DB_URL`  | `jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/olinabilaza_planner?sslMode=VERIFY_IDENTITY&createDatabaseIfNotExist=true` |
-| `DB_USER` | `xxxxxxxx.root` |
-| `DB_PASS` | your database password |
-| `PORT`    | `8080` |
-
-Without these variables the app uses the local default `jdbc:mysql://localhost:3306/olinabilaza_planner`, user `root`, empty password (XAMPP).
